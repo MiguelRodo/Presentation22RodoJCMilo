@@ -1,0 +1,850 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Milo</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Emma Dann, Neil C. Henderson, Sarah A. Teichmann, Michael D. Morgan, John C. Marioni" />
+    <meta name="date" content="2022-07-22" />
+    <script src="libs/header-attrs-2.14/header-attrs.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="css/extra.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+class: center, middle, inverse, title-slide
+
+.title[
+# Milo
+]
+.subtitle[
+## Differential abundance testing on single-cell data using k-NN graphs
+]
+.author[
+### Emma Dann, Neil C. Henderson, Sarah A. Teichmann, Michael D. Morgan, John C. Marioni
+]
+.institute[
+### Presented by: Miguel Rodo
+]
+.date[
+### 2022-07-22
+]
+
+---
+
+
+
+
+
+
+class: center
+
+# Standard-practice single-cell analysis
+
+&lt;figure&gt;
+  &lt;p&gt;&lt;img src="img/typical_single_cell_analysis_workflow.png"
+     width="500px" style = "float: bottom"&gt;&lt;/p&gt;
+  &lt;figcaption&gt;Modified from Arend (2021)&lt;figcaption&gt;
+&lt;/figure&gt;
+
+???
+
+---
+background-image: url(img/markus-spiske-ks_nwPcGdl8-unsplash.jpg)
+background-size:cover
+
+class: bottom
+
+
+.right[Markus Spiske]
+
+---
+
+class: center 
+
+# Analysing cells along a continuum
+
+&lt;div style = "display: flex; align-items: center; height: 500px"&gt;
+  &lt;img src="img/trajectory_example_1.png"
+      width="1500px"/&gt;
+&lt;/div&gt;
+
+---
+
+class: center 
+
+# Analysing cells along a continuum
+
+&lt;div style = "display: flex; align-items: center; height: 500px"&gt;
+  &lt;img src="img/trajectory_example_2.png"
+      width="1500px"/&gt;
+&lt;/div&gt;
+
+???
+
+- How might this help?
+  - I suppose because we don't rely so much on particular clusters being perfect
+  - Also because cells may not belong to discrete clusters, so we can average over what stage exactly they're in
+- When they say that they don't allocate cells to distinct clusters, what they mean is that one cell can belong to more than one cluster, but they still ultimately test those clusters for frequencies
+  - Interpretation is presumably still done on the basis of the neighbourhoods
+
+---
+
+class: center
+
+# A nearest-neighbour graph
+
+&lt;/figure&gt;
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/nn_graph.png"
+      width="500px" style="border: 2px black solid"/&gt;
+&lt;/div&gt;
+&lt;figcaption&gt;&lt;span style="font-size:50%"&gt;David Eppstein&lt;/span&gt;&lt;/figcaption&gt;
+&lt;/figure&gt;
+
+???
+
+- A nearest-neighbour graph is simply where you join each point (or observation or element) to the one that is closest to it
+- A k-NN graph is one where you join each observation to the `k` observations closest to it
+
+---
+
+class: center
+
+# What is a neighbourhood?
+
+&lt;span style="align: left"&gt; A neighbourhood is all cells that are connected to an index cell &lt;span&gt;
+
+These cells are therefore either nearest neighbours to the index cell, or the index cell is a nearest neighbour to them
+
+--
+
+Statistical testing centres on the neighbourhood
+
+
+
+---
+
+class: center
+
+# How are index cells identified?
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/identify_index_cells_1.png"
+      width="1500px" style="border: 100px black solid padding: 5px"/&gt;
+&lt;/div&gt;
+
+???
+
+- They randomly select cells (10% of all cells when there are &lt;100k cells; 0.05 for more than)
+
+---
+
+class: center
+
+# How are index cells identified?
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/identify_index_cells.png"
+      width="1500px" style="border: 100px black solid padding: 5px"/&gt;
+&lt;/div&gt;
+
+???
+
+- They randomly select cells (10% of all cells when there are &lt;100k cells; 0.05 for more than)
+- Then they compute the average position for the nearest neighbour
+- Then they choose the cells that are closest to these points as the nearest neighbours
+
+---
+
+background-image: url("img/fomo.png")
+background-size: cover
+class: inverse, center
+
+# Is every cell analysed?
+
+&lt;a href="https://www.flickr.com/photos/91261194@N06/51081095233" style = "position: relative; top: 460px; left: 550px"&gt;source&lt;/a&gt;
+
+
+???
+
+- Hard to say
+
+
+- In the supp, they say that if you suspect differential abundance in disconnected, rare subsets, you should (perhaps greatly, I think) increase the proportion of cells sampled initially
+
+---
+
+# Refinement step dramatically improves coverage
+
+&lt;div style = "display: flex; align-items: center; height: 475px; justify-content: center"&gt;
+  &lt;img src="img/cell_sampling_1.png"
+      width="1500px"  /&gt;
+&lt;/div&gt;
+
+???
+
+- Based on 5000 cells
+- Often converge to same index cell
+
+---
+
+# Refinement step dramatically improves coverage
+
+&lt;div style = "display: flex; align-items: center; height: 475px; justify-content: center"&gt;
+  &lt;img src="img/cell_sampling_2.png"
+      width="1500px"  /&gt;
+&lt;/div&gt;
+
+
+---
+
+class: center
+
+# Searching for differences in abundances by neighbourhood
+
+--
+
+&lt;div style = "display: flex; align-items: center; height: 425px; justify-content: center"&gt;
+  &lt;img src="img/cell_count_then_test_0.png"
+      width="1500px"  /&gt;
+&lt;/div&gt;
+
+???
+
+- First, for each neighourhood for each sample, the number of samples are counted
+
+---
+
+class: center
+
+# Searching for differences in abundances by neighbourhood
+
+
+&lt;div style = "display: flex; align-items: center; height: 425px; justify-content: center"&gt;
+  &lt;img src="img/cell_count_then_test_1.png"
+      width="1500px"  /&gt;
+&lt;/div&gt;
+
+???
+
+- First, for each neighourhood for each sample, the number of samples are counted
+- These are modelled using a negative binomial model
+  - Allows for more complex experimental designs
+  - Allows for skewer distributions
+  - Allows cell count to vary by sample
+
+---
+
+class: center 
+
+# Searching for differences in abundances by neighbourhood
+
+
+&lt;div style = "display: flex; align-items: center; height: 425px; justify-content: center"&gt;
+  &lt;img src="img/cell_count_then_test_2.png"
+      width="1500px" /&gt;
+&lt;/div&gt;
+
+???
+
+- First, for each neighourhood for each sample, the number of samples are counted
+- These are modelled using a negative binomial model
+  - Allows for more complex experimental designs
+  - Allows for skewer distributions
+  - Allows cell count to vary by sample
+- We get out p-values, which we correct using a so-called spatial FDR
+
+---
+
+class: center
+
+# Spatial FDR 
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/spatial_fdr.png"
+      width="900px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Key point here is that they used an FDR that was "more lenient" because cells could belong to more than one neighbourhood, and so be tested twice
+- Very similar formula to the regular FDR procedure, except that per-neighbourhood q-values include weights for how "tight" a neighbourhood is
+  - Tighter neighbourhoods are more independent and so are penalised more heavily
+
+---
+
+class: center
+
+# Example results
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/initial-results.png"
+      width="700px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Not exactly clear how you'd interpret that
+  - Perhaps look at "most" different neighbourhood?
+- They say that this region was not even identified as a distinct cluster by other methods
+
+---
+
+class: center
+
+# Approaches compared
+
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/methods_table.png"
+      width="1200px" /&gt;
+&lt;/div&gt;
+
+???
+
+- `Cydar`
+  - Assign cells to overlapping hyperspheres, and control FDR using spatial FDR
+  
+- `DA-seq`
+  - Identifies cells belong to regions with differential expression, and *then* clusters them
+    - For DA-seq, cells were counted as significant when "absolute differential abundance measure values were larger than the maximum differential abundance measure obtained with randomly permuted labels"
+
+
+- `Louvain`
+  - Assign cells to distinct clusters using graph-based clustering, and tests using a NB GLM
+
+- `Meld`
+  - Creates a density based ona  KNN graph
+  - User selects threshold for determining statistical significance
+
+---
+
+class: center
+
+# Simulation assessment
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/sim_full-5.png"
+      width="1200px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Here is an example of a UMAP representation of the KNN graph constructed from simulated/real data
+
+---
+
+class: center
+
+# In silico datasets
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/sim_in_silico_1.png"
+      width="900px" /&gt;
+&lt;/div&gt;
+
+???
+
+- To generate entirely-simulated data, they used the `dyntoy` R package, which can simulate single-cell data that has specific "shapes"
+- Here they simulate data from discrete clusters
+
+---
+
+class: center
+
+# In silico datasets
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/sim_in_silico_2.png"
+      width="900px" /&gt;
+&lt;/div&gt;
+
+???
+
+- To generate entirely-simulated data, they used the `dyntoy` R package, which can simulate single-cell data that has specific "shapes"
+- Here they simulate data from discrete clusters
+- In B they have a continuous topology
+
+---
+
+class: center
+
+# In silico datasets
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/sim_in_silico_3.png"
+      width="900px" /&gt;
+&lt;/div&gt;
+
+???
+
+- To generate entirely-simulated data, they used the `dyntoy` R package, which can simulate single-cell data that has specific "shapes"
+- Here they simulate data from discrete clusters
+- In B they have a continuous topology
+- In C they have a branching topology
+
+---
+
+# Real-world dataset
+
+- Based on the mouse gastrulation atlas
+  - Raw count matrix
+  - Batch-corrected PCA matrix
+  - Chose cells from embryos at specific developmental stages only
+  - 64018 cells 
+
+---
+
+class: center
+
+# Assigning per-cell enrichment probability
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/sim_full-4.png"
+      width="1200px" /&gt;
+&lt;/div&gt;
+
+???
+
+- For each scenario, they give each cell a probability to belonging to one of two conditions
+  - For the in-silico dataset without a continuous trajectory, one cluster was enriched for condition C1 and the others were given probability 0.5
+  - For the in-silico datasets with continuous trajectory, one cluster was selected as enriched with the mean cell given "maximum enrichment" and enrichment decreasing outwards from there towards 0.5
+  - Not entirely sure what they did with the real world data
+
+---
+
+class: center
+
+# Generate per-cell condition labels
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/sim_full-3.png"
+      width="1200px" /&gt;
+&lt;/div&gt;
+
+???
+
+- For each simulation for each dataset, they simulate per-cell condition labels based on the previously-defined probabilities
+
+---
+
+class: center
+
+# Identify differentially-abundant cells
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/sim_full-2.png"
+      width="1200px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Do this for each method
+
+---
+
+class: center
+
+# Determine ground truth
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/sim_full-1.png"
+      width="1200px" /&gt;
+&lt;/div&gt;
+
+???
+
+- As far as I can tell, this is done on a per-cell basis
+  - This results in continuous regions in the plot because the probability assignments were done in a continuous manner
+
+---
+
+class: center
+
+# Compare predicted to actual
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/sim_full.png"
+      width="1200px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Here they then calculate the TPR (sensitivity) and FDR
+  - Two well-chosen measures, as the true-positives are rarer (so getting high TPR with low FDR is hard)
+
+---
+
+class: center
+
+# Simulation results
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/results_sim.png"
+      width="850px" /&gt;
+&lt;/div&gt;
+
+???
+
+- I don't undersatnd why FDR got worse for Cydar and TPR got worse for Louvain as effect size went up
+- These are faily big effect sizes
+- Milo is controlling the FDR well below the nominal rate of 0.1
+  - Indicates problem with spatial FDR control calibration?
+- Cydar was very insensitive, as was DAse
+- Unclear why Louvain + NB was so quick to declare differences
+- Overall, though, based on their simulation setup, their algorithm did the best
+
+---
+
+# Simulated batch effects
+
+- Confounded condition with batch
+  - Allocated cells randomly to one of two batches
+  - Added a certain probability of belonging to cluster C1 for all the cells in one of the batches
+
+---
+
+class: center
+
+# Simulation results under batch effects
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/results_sim_batch.png"
+      width="850px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Cydar's sensitivity drops off dramatically
+- DE-seq gets lots of false positives
+- Louvain and Milo used fixed/random effects for batch, and so were fine
+- Milo's performance less affected by batch effects than other methods
+
+---
+
+class: center
+
+# Milo is scalable (by scRNAseq standards)
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/run_time_1.png"
+      width="1200px" /&gt;
+&lt;/div&gt;
+
+???
+
+---
+
+class: center
+
+# Milo is scalable (by scRNAseq standards)
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/run_time_2.png"
+      width="1200px" /&gt;
+&lt;/div&gt;
+
+???
+
+---
+
+class: center
+
+# Application: scRNA-seq mouse dataset
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/mouse_dataset-cells-1.png"
+      width="1200px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Cell types
+  - Thymic epitehlial cells (TECs)
+  - 2327 cells
+  - Previously clustered into nine subtypes
+
+---
+
+class: center
+
+# Application: scRNA-seq mouse dataset
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/mouse_dataset-cells-2.png"
+      width="1200px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Cell types
+  - Thymic epitehlial cells (TECs)
+  - 2327 cells
+  - Previously clustered into nine subtypes
+
+- Sampling
+  - Across first year of mouse life
+    - Weeks: 1, 4, 16, 32 and 52
+
+- Study goal
+  - Identify TEC subtypes that changed in frequency during aging
+ 
+---
+
+class: center
+
+# Differentially-abundant neighbourhoods
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/mouse_dataset-results-1.png"
+      width="900px" /&gt;
+&lt;/div&gt;
+
+???
+
+- These were the differentially-abundant neighbourhoods identified
+
+---
+
+class: center
+
+# Comparison with original study's results
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/mouse_dataset-results-2.png"
+      width="900px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Showed some variation within these datasets - some went down and some went up
+
+---
+
+class: center
+
+# Further interrogation of intertypical TECs
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/mouse_data-interrogation_1.png"
+      width="900px" /&gt;
+&lt;/div&gt;
+
+???
+
+- First grouped the differential abundance neighborhoods with overlapping cells and concordant differential abundance fold change
+
+---
+
+class: center
+
+# Further interrogation of intertypical TECs
+
+&lt;div style = "display: flex; align-items: center; height: 500px; justify-content: center"&gt;
+  &lt;img src="img/mouse_data-interrogation_2.png"
+      width="900px" /&gt;
+&lt;/div&gt;
+
+???
+
+- First grouped the differential abundance neighborhoods with overlapping cells and concordant differential abundance fold change
+- Looked for differentially-expressed genes
+
+---
+
+class: center
+
+# Integration with larger droplet scRNA-seq data
+
+&lt;div style = "display: flex; align-items: center; height: 450px; justify-content: center"&gt;
+  &lt;img src="img/mouse_dataset-integration_1.png"
+      width="1300px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Integrated data using mutual nearest-neighbours algorithm
+
+---
+
+class: center
+
+# Integration with larger droplet scRNA-seq data
+
+&lt;div style = "display: flex; align-items: center; height: 450px; justify-content: center"&gt;
+  &lt;img src="img/mouse_dataset-integration_2.png"
+      width="1300px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Transferred neighbourhood group labels from SMART_seq to droplet scRNAseq
+- Examined the drop scRNAseq data, finding that the transcriptionally-similar cells were indeed depleted in older mice
+
+---
+
+class: center
+
+# Analysis of human liver cells: healthy vs cirrhotic
+
+&lt;div style = "display: flex; align-items: center; height: 450px; justify-content: center"&gt;
+  &lt;img src="img/liver-1.png"
+      width="670px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Human liver cells from 5 healthy and five with cirrhosis
+
+---
+
+class: center
+
+# Analysis of human liver cells: healthy vs cirrhotic
+
+&lt;div style = "display: flex; align-items: center; height: 450px; justify-content: center"&gt;
+  &lt;img src="img/liver-2.png"
+      width="670px" /&gt;
+&lt;/div&gt;
+
+???
+
+- Interestingly still found differently-behaving subsets within the major subsets
+
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"ratio": "16:9",
+"highlightStyle": "github",
+"highlightLines": true,
+"countIncrementalSlides": false
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+// add `data-at-shortcutkeys` attribute to <body> to resolve conflicts with JAWS
+// screen reader (see PR #262)
+(function(d) {
+  let res = {};
+  d.querySelectorAll('.remark-help-content table tr').forEach(tr => {
+    const t = tr.querySelector('td:nth-child(2)').innerText;
+    tr.querySelectorAll('td:first-child .key').forEach(key => {
+      const k = key.innerText;
+      if (/^[a-z]$/.test(k)) res[k] = t;  // must be a single letter (key)
+    });
+  });
+  d.body.setAttribute('data-at-shortcutkeys', JSON.stringify(res));
+})(document);
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>

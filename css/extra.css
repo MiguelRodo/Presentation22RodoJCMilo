@@ -1,0 +1,22 @@
+.img-container {
+  text-align: center;
+}
+
+.centerImage {
+  display: block;
+  margin-left: auto;
+  margin-right: auto
+}
+
+.center2 {
+  margin: 0;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  -ms-transform: translate(-50%, -50%);
+  transform: translate(-50%, -50%);
+}
+
+.bulletText {
+  font-size: 150%
+}
