@@ -1,2 +1,0 @@
-# Xaringan - Images - Resizing
-
