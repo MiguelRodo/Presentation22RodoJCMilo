@@ -110,6 +110,7 @@ class: center
 
 These cells are therefore either nearest neighbours to the index cell, or the index cell is a nearest neighbour to them
 
+
 --
 
 Statistical testing centres on the neighbourhood
